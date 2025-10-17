@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="es" data-theme="dark">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Intención de Voto – Livitaca 2026</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    :root{
+      --bg:#0d1117; --panel:#0f172a; --text:#e6e6e6; --muted:#9aa4b2;
+      --ok:#22c55e; --accent:#d4af37; --border:#1e293b;
+      --chip:#0a1a0a; --shadow:0 10px 25px rgba(0,0,0,.25);
+    }
+    [data-theme="light"]{
+      --bg:#f8fafc; --panel:#ffffff; --text:#0f172a; --muted:#475569;
+      --ok:#2563eb; --accent:#d97706; --border:#e2e8f0;
+      --chip:#f1f5f9; --shadow:0 8px 24px rgba(2,6,23,.08);
+    }
+    *{box-sizing:border-box}
+    body{margin:0;font-family:'Inter',system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial;background:var(--bg);color:var(--text);}
+    .hero{
+      background-image: linear-gradient(180deg,rgba(0,0,0,.60),rgba(0,0,0,.65)), url('https://images.unsplash.com/photo-1517694712202-14dd9538aa97?auto=format&fit=crop&w=1600&q=80');
+      background-size:cover;background-position:center;position:relative;text-align:center;padding:56px 16px;
+    }
+    h1{font-size:clamp(22px,4vw,40px);font-weight:800;text-transform:uppercase;margin:0 0 6px}
+    .subtitle{color:#93c5fd;margin:0 0 6px}
+    .meta{color:var(--muted);font-size:14px}
+    .topbar{display:flex;justify-content:space-between;align-items:center;max-width:1100px;margin:auto;padding:10px 16px;color:#cbd5e1}
+    .chip{font-size:12px;border:1px solid var(--border);padding:6px 10px;border-radius:999px;background:rgba(255,255,255,.06)}
+    .toggle{cursor:pointer;border:1px solid var(--border);padding:6px 10px;border-radius:999px;background:rgba(255,255,255,.06)}
+    .wrap{max-width:1100px;margin:auto;padding:24px 16px}
+    .grid{display:grid;gap:24px;grid-template-columns:1fr;align-items:start}
+    @media(min-width:900px){.grid{grid-template-columns:1fr 1fr}}
+    .panel{background:var(--panel);border:1px solid var(--border);border-radius:14px;box-shadow:var(--shadow);padding:18px}
+    .question{font-weight:600;margin:0 0 8px}
+    .hint{font-size:13px;color:var(--muted);margin:0 0 16px}
+    .candidate{display:flex;align-items:center;justify-content:space-between;background:var(--chip);border:1px solid var(--border);border-radius:12px;padding:10px 12px;margin-bottom:10px;transition:.15s transform,.15s box-shadow}
+    .candidate:hover{transform:translateY(-2px);box-shadow:var(--shadow)}
+    .btn-vote{background:var(--accent);color:#111;font-weight:700;border:0;border-radius:8px;padding:10px 14px;cursor:pointer;min-width:120px}
+    .btn-vote:active{transform:translateY(1px)}
+    .charts h3{margin:4px 0 12px;display:flex;align-items:center;gap:8px}
+    .online-dot{width:10px;height:10px;border-radius:999px;background:#0ea5e9;display:inline-block}
+    .online-dot.ok{background:#22c55e}
+    .statline{color:#b7f3b4;font-size:14px;line-height:1.55;margin-top:10px}
+    .total{display:inline-flex;align-items:center;gap:8px;background:rgba(255,255,255,.06);border:1px solid var(--border);padding:6px 10px;border-radius:999px;font-size:13px}
+    .toast{position:fixed;right:16px;bottom:16px;background:var(--panel);border:1px solid var(--border);box-shadow:var(--shadow);color:var(--text);padding:12px 14px;border-radius:12px;opacity:0;transform:translateY(8px);transition:.25s;pointer-events:none}
+    .toast.show{opacity:1;transform:none}
+  </style>
+</head>
+<body>
+  <div class="topbar">
+    <span class="chip">Distrito: <b>Livitaca</b></span>
+    <div style="display:flex;gap:10px;align-items:center">
+      <span id="totalVotos" class="total">0 votos</span>
+      <button id="toggleTheme" class="toggle">Modo claro/oscuro</button>
+    </div>
+  </div>
+  <section class="hero">
+    <h1>INTENCIÓN DE VOTO MUNICIPAL PROGRAMADO POR BRAULIO BELLO TAIPE</h1>
+    <p class="subtitle">2026 — Livitaca</p>
+    <p class="meta">Haz clic en tu candidato. Se permite <b>1 voto por navegador</b>. Resultados en tiempo real.</p>
+  </section>
+  <div class="wrap">
+    <div class="grid">
+      <div class="panel">
+        <p class="question">¿Si las elecciones fueran mañana, por quién votarías para la alcaldía de Livitaca?</p>
+        <p class="hint">Selecciona tu preferencia. Gracias por participar con responsabilidad.</p>
+        <div id="listaCandidatos"></div>
+      </div>
+      <div class="panel charts">
+        <h3><span class="online-dot" id="dot"></span> Resultados (en tiempo real)</h3>
+        <div class="panel" style="padding:12px;margin:0 0 12px 0">
+          <canvas id="chartBar" height="240"></canvas>
+        </div>
+        <div class="panel" style="padding:12px;margin:0">
+          <canvas id="chartPie" height="220"></canvas>
+        </div>
+        <div id="detalle" class="statline"></div>
+      </div>
+    </div>
+    <footer style="text-align:center;margin-top:28px;color:var(--muted);font-size:12px">
+      © <span id="anio"></span> · Municipalidad Distrital de Livitaca — 2026 · Uso informativo.
+    </footer>
+  </div>
+  <div id="toast" class="toast">¡Gracias por tu voto! 🗳️</div>
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.4/firebase-app.js";
+    import { getFirestore, doc, runTransaction, onSnapshot } from "https://www.gstatic.com/firebasejs/10.12.4/firebase-firestore.js";
+
+    // Configuración de Firebase
+    const firebaseConfig = {
+      apiKey: "AIzaSyDNje5XQGKCdTJwUm3Br1hZYyLidE6m4BQ",
+      authDomain: "encuestas-livitaca.firebaseapp.com",
+      projectId: "encuestas-livitaca",
+      storageBucket: "encuestas-livitaca.firebasestorage.app",
+      messagingSenderId: "1091824096539",
+      appId: "1:1091824096539:web:33e1a807339d97395eafbe"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+
+    // Configuración de la encuesta
+    const ENCUESTA_ID = "MB5pW0iu4FvH8eZBAat4"; // ID del documento en Firestore
+    const CANDIDATOS = [
+      { id:"c1", nombre:"Alfredo Pacco – Perú Primero" },
+      { id:"c2", nombre:"José Sencia – Nuevo Perú" },
+      { id:"c3", nombre:"Raúl Huamaní – PRIN" },
+      { id:"c4", nombre:"Guido Sencia – Ahora Nación" },
+      { id:"c5", nombre:"Mario Molina – Libertad Popular" },
+      { id:"c6", nombre:"Elar Villalobos – Frente Esperanza" },
+      { id:"nsno", nombre:"N/S – N/O – Blanco" }
+    ];
+    const EMPTY_TOTALS = Object.fromEntries(CANDIDATOS.map(c=>[c.id,0]).concat([["total",0]]));
+
+    // Referencia al documento
+    const pollRef = doc(db, "polls", ENCUESTA_ID);
+
+    // One vote
+    const VOTED_KEY = "voted:"+ENCUESTA_ID;
+    function simpleHash(str){let h=0; for(let i=0;i<str.length;i++){ h=Math.imul(31,h)+str.charCodeAt(i)|0; } return (h>>>0).toString(16);}
+    function getFingerprint(){
+      let seed = localStorage.getItem("fp_seed");
+      if(!seed){ seed = crypto.getRandomValues(new Uint32Array(1))[0].toString(16); localStorage.setItem("fp_seed", seed); }
+      const base = [navigator.userAgent,navigator.language,screen.width+'x'+screen.height,Intl.DateTimeFormat().resolvedOptions().timeZone,seed].join("|");
+      return simpleHash(base);
+    }
+
+    // Render candidatos
+    const lista = document.getElementById("listaCandidatos");
+    lista.innerHTML = CANDIDATOS.map(c => `
+      <div class="candidate">
+        <div>${c.nombre}</div>
+        <button class="btn-vote" data-id="${c.id}">Votar</button>
+      </div>
+    `).join("");
+
+    // Charts
+    const dot = document.getElementById("dot");
+    const totalEl = document.getElementById("totalVotos");
+    const detalleEl = document.getElementById("detalle");
+    const ctxBar = document.getElementById("chartBar").getContext("2d");
+    const ctxPie = document.getElementById("chartPie").getContext("2d");
+    let bar = new Chart(ctxBar, {
+      type: "bar",
+      data: { labels: CANDIDATOS.map(c=>c.nombre), datasets: [{ label:"Votos", data: CANDIDATOS.map(()=>0), backgroundColor: getComputedStyle(document.documentElement).getPropertyValue('--ok').trim() }]},
+      options: { indexAxis:"y", animation:{ duration: 350 }, plugins:{ legend:{ display:false } },
+        scales:{ x:{ ticks:{ color:getComputedStyle(document.documentElement).getPropertyValue('--muted').trim() } },
+                y:{ ticks:{ color:getComputedStyle(document.documentElement).getPropertyValue('--muted').trim() } } } }
+    });
+    let pie = new Chart(ctxPie, {
+      type: "pie",
+      data: { labels: CANDIDATOS.map(c=>c.nombre), datasets:[{ data: CANDIDATOS.map(()=>0) }]},
+      options: { plugins:{ legend:{ labels:{ color:getComputedStyle(document.documentElement).getPropertyValue('--muted').trim() } } } }
+    });
+    function animateCounter(el,from,to,ms=350){
+      const start = performance.now();
+      function step(t){
+        const p = Math.min(1,(t-start)/ms);
+        const val = Math.round(from+(to-from)*p);
+        el.textContent = val.toLocaleString('es-PE') + " votos";
+        if(p<1) requestAnimationFrame(step);
+      }
+      requestAnimationFrame(step);
+    }
+
+    // Live snapshot
+    let lastTotal = 0;
+    onSnapshot(pollRef, snap => {
+      const d = snap.exists()? snap.data(): EMPTY_TOTALS;
+      const vals = CANDIDATOS.map(c=>d[c.id]||0);
+      bar.data.datasets[0].data = vals; bar.update();
+      pie.data.datasets[0].data = vals; pie.update();
+      const total = d.total||0;
+      animateCounter(totalEl, lastTotal, total); lastTotal = total;
+      let html = `<b>Total de votos: ${total}</b><br>`;
+      CANDIDATOS.forEach(c=>{
+        const v = d[c.id]||0;
+        const p = total ? (v*100/total).toFixed(1) : 0;
+        html += `${c.nombre}: ${v} (${p}%)<br>`;
+      });
+      detalleEl.innerHTML = html;
+      // online indicator
+      dot.classList.add("ok");
+    });
+
+    // Vote
+    document.addEventListener("click", (e)=>{
+      const btn = e.target.closest("[data-id]");
+      if(!btn) return;
+      votar(btn.dataset.id);
+    });
+
+    async function votar(opcion){
+      const fp = getFingerprint();
+      if(localStorage.getItem(VOTED_KEY)){ showToast("Ya votaste en este navegador."); return; }
+      try{
+        await runTransaction(db, async (tx)=>{
+          const snap = await tx.get(pollRef);
+          const data = snap.exists()? snap.data(): { ...EMPTY_TOTALS };
+          data[opcion] = (data[opcion]||0) + 1;
+          data.total  = (data.total||0) + 1;
+          tx.set(pollRef, data);
+        });
+        localStorage.setItem(VOTED_KEY,"1");
+        showToast("¡Gracias por tu voto! 🗳️");
+      }catch(err){
+        console.error(err);
+        showToast("No se pudo registrar el voto. Intenta nuevamente.");
+      }
+    }
+
+    // Toast
+    const toast = document.getElementById("toast");
+    function showToast(msg){
+      toast.textContent = msg;
+      toast.classList.add("show");
+      setTimeout(()=>toast.classList.remove("show"), 1800);
+    }
+
+    // Theme toggle
+    document.getElementById("toggleTheme").addEventListener("click",()=>{
+      const root = document.documentElement;
+      const cur = root.getAttribute("data-theme") || "dark";
+      root.setAttribute("data-theme", cur==="dark" ? "light" : "dark");
+      // recolor axes/series
+      const muted = getComputedStyle(document.documentElement).getPropertyValue('--muted').trim();
+      bar.options.scales.x.ticks.color = muted;
+      bar.options.scales.y.ticks.color = muted;
+      bar.data.datasets[0].backgroundColor = getComputedStyle(document.documentElement).getPropertyValue('--ok').trim();
+      bar.update();
+      pie.options.plugins.legend.labels.color = muted;
+      pie.update();
+    });
+
+    // Año
+    document.getElementById("anio").textContent = new Date().getFullYear();
+  </script>
+</body>
+</html>
